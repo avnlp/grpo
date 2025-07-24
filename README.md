@@ -1,4 +1,4 @@
-# GRPO: Group Relative Policy Optimization Algorithm
+# Group Relative Policy Optimization (GRPO)
 
 Group Relative Policy Optimization (GRPO) is an algorithm proposed by Deepseek for training large language models with reinforcement learning. This repository aggregates and refactors **four distinct implementations** of GRPO, each demonstrating different approaches to the core algorithm while sharing common principles.
 
