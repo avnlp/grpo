@@ -1,0 +1,147 @@
+[build-system]
+requires = ["uv_build>=0.7.20,<0.8.0"]
+build-backend = "uv_build"
+
+[project]
+name = "grpo"
+version = "0.1.0"
+description = 'Group Relative Policy Optimization implementations.'
+readme = "README.md"
+requires-python = ">=3.10,<=3.12"
+license = "MIT"
+keywords = []
+authors = [
+    { name = "Ashwin Mathur", email = "" },
+    { name = "Varun Mathur", email = "" },
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+]
+dependencies = [
+    "torch",
+    "transformers",
+    "accelerate",
+    "datasets",
+    "deepspeed",
+    "wandb",
+]
+
+[dependency-groups]
+dev = [
+    "black",
+    "mypy",
+    "ruff",
+]
+
+[project.urls]
+Documentation = "https://github.com/avnlp/grpo#readme"
+Issues = "https://github.com/avnlp/grpo/issues"
+Source = "https://github.com/avnlp/grpo"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ARG",
+    "B",
+    "C",
+    "D",
+    "D401",
+    "DTZ",
+    "E",
+    "EM",
+    "F",
+    "I",
+    "ICN",
+    "ISC",
+    "N",
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    "Q",
+    "RUF",
+    "S",
+    "T",
+    "TID",
+    "UP",
+    "W",
+    "YTT",
+]
+ignore = [
+    "ARG001", # Allow unused kwargs in functions
+    # Allow non-abstract empty methods in abstract base classes
+    "A002",
+    "B027",
+    "B018",
+    # Allow boolean positional values in function calls, like `dict.get(... True)`
+    "FBT003",
+    # Ignore checks for possible passwords
+    "S101",
+    "S104",
+    "S105",
+    "S106",
+    "S107",
+    "S113",
+    "S701",
+    # Ignore complexity
+    "C901",
+    "PLR2004", # Allow Magic value used in comparison
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLW2901",
+    "DTZ005",
+    # Allow print statements
+    "T201",
+    # Ignore missing module docstrings
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D107",
+    "D205",
+    "D401",
+    "D417",
+    # Ignore Line too long
+    "E501",
+    "E722",
+    "E741",
+    "N802",
+    "N806",
+    "N812",
+    "N816",
+]
+unfixable = [
+    # Don't touch unused imports
+    "F401",
+]
+extend-select = ["I"]
+
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["grpo"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.black]
+line-length = 120
+
+[[tool.mypy.overrides]]
+module = ["grpo.*", "pytest.*", "numpy.*"]
+ignore_missing_imports = true
