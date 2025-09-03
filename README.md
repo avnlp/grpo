@@ -4,25 +4,60 @@ Group Relative Policy Optimization (GRPO) is an algorithm proposed by Deepseek f
 
 ## Algorithm
 
-The core GRPO algorithm follows these steps:
+GRPO eliminates the need for additional value function approximation by using the average reward of multiple sampled responses to the same query as the baseline, significantly reducing computational and memory overhead in reinforcement learning training. This approach maintains policy optimization stability while removing the complexity of training a value function.
 
-1. For each training step, randomly sample $N$ questions $q_1, q_2, \cdots, q_N$.
-2. For each question $q_i$, sample $M$ answers $a_{i,1}, a_{i,2}, \cdots, a_{i,M}$.
-3. Compute the reward $r_{i,j}$ for each answer $a_{i,j}$.
-4. Compute group statistics for each question $q_i$:
+For each question $q$, GRPO samples a group of outputs $\{o_1, o_2, \cdots, o_G\}$ from the old policy $\pi_{\theta_{old}}$ and then optimizes the policy model by maximizing the following objective:
 
-$$
-\begin{alignedat}{2}
-&\mu_i &&\leftarrow \text{mean}(r_{i,1}, r_{i,2}, \cdots, r_{i,M}) \\
-&\sigma_i &&\leftarrow \text{std}(r_{i,1}, r_{i,2}, \cdots, r_{i,M})
-\end{alignedat}
-$$
+<img src="images/grpo_objective.png" width="95%" alt="GRPO Objective">
 
-5. For each token $t$ in answer $a_{i,j}$, compute advantage:
-$$A_{i,j}[t] \leftarrow \frac{r_{i,j} - \mu_i}{\sigma_i}$$
+Instead of adding KL penalty in the reward, GRPO regularizes by directly adding the KL divergence between the trained policy and the reference policy to the loss, avoiding complicating the calculation of $\hat{A}_{i,t}$. The KL divergence is estimated with the following unbiased estimator, which is guaranteed to be positive:
 
-6. Update policy using PPO surrogate objective:
-$$\nabla_\theta \log \pi_\theta(a_{i,j}[t]) \cdot A_{i,j}[t]$$
+
+<div align="center">
+    <img src="images/kl_divergence.png" width="60%" alt="GRPO KL Divergence">
+</div>
+
+&nbsp;
+
+A reward function is then used to score the outputs, yielding $G$ rewards $\mathbf{r}=\{R(q, o_1), R(q, o_2), \cdots, R(q, o_G)\}$ correspondingly. These rewards are normalized by subtracting the group average and dividing by the group standard deviation. The normalized rewards for each output $o_i$ define the advantages $\hat{A}_{i, t}$ for all tokens in the output. The policy is then optimized by maximizing the GRPO objective.
+
+<div align="center">
+    <img src="images/rewards.png" width="44%" alt="GRPO Rewards">
+</div>
+
+where,
+
+- $\pi_{\theta}$ and $\pi_{\theta_{old}}$ are the current and old policy models,
+- $\pi_{ref}$ is the reference model
+- $q$ are questions from the question dataset
+- $o$ are outputs sampled from the old policy $\pi_{\theta_{old}}$
+- $R(q, o_i)$ is the reward for output $o_i$ to question $q$
+- $\epsilon$ is a clipping-related hyper-parameter introduced in PPO for stabilizing training.
+- $\beta$ is the coefficient of the KL penalty
+- $\hat{A}_{i,t}$ is the advantage calculated based on relative rewards of the outputs inside each group (note: the advantage value is constant for all tokens within a single output sequence).
+
+&nbsp;
+
+<div style="border: 1px solid #ccc; padding: 15px; font-family: monospace;">
+<pre>
+<b>Algorithm:</b>
+Input initial policy model π<sub>θ<sub>init</sub></sub>; reward function r<sub>φ</sub>; task prompts 𝓓; hyperparameters ε, β, μ
+1: policy model π<sub>θ</sub> ← π<sub>θ<sub>init</sub></sub>
+2: <b>for</b> iteration = 1, ..., I <b>do</b>
+3:     reference model π<sub>ref</sub> ← π<sub>θ</sub>
+4:     <b>for</b> step = 1, ..., M <b>do</b>
+5:         Sample a batch 𝓓<sub>b</sub> from 𝓓
+6:         Update the old policy model π<sub>θ<sub>old</sub></sub> ← π<sub>θ</sub>
+7:         Sample G outputs {o<sub>i</sub>}<sup>G</sup><sub>i=1</sub> ∼ π<sub>θ<sub>old</sub></sub>(·|q) for each question q ∈ 𝓓<sub>b</sub>
+8:         Compute rewards {r<sub>i</sub>}<sup>G</sup><sub>i=1</sub> = {R(q, o<sub>1</sub>), R(q, o<sub>2</sub>), ..., R(q, o<sub>G</sub>)} for each output o<sub>i</sub> using r<sub>φ</sub>
+9:         Compute output-level advantage:
+               Â<sub>i</sub> = (R(q, o<sub>i</sub>) - mean(R(q, o<sub>1</sub>), ..., R(q, o<sub>G</sub>))) / std(R(q, o<sub>1</sub>), ..., R(q, o<sub>G</sub>))
+               and set Â<sub>i,t</sub> = Â<sub>i</sub> for all tokens t in output o<sub>i</sub> (constant within each output)
+10:        <b>for</b> GRPO iteration = 1, ..., μ <b>do</b>
+11:            Update the policy model π<sub>θ</sub> by maximizing the GRPO objective
+<b>Output</b> π<sub>θ</sub>
+</pre>
+</div>
 
 ## Implementations
 
@@ -91,3 +126,8 @@ The implementations have different variations in the following aspects:
 - Training Framework: The implementations use different training frameworks (e.g., DeepSpeed, pure PyTorch) and optimization techniques (e.g., gradient checkpointing).
 
 - Batching and Generation: The approaches to generation (vLLM, Hugging Face transformers) and batching vary.
+
+
+## References
+
+[1] [DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models](https://arxiv.org/abs/2402.03300)
