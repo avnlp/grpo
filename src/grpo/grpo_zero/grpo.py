@@ -51,7 +51,7 @@ def rollout(
 
     for cur_pos in range(min_prompt_len, total_len):
         print(
-            f"\r* Generating trajectories: {cur_pos-min_prompt_len:>4d}/{total_len-min_prompt_len:>4d}",
+            f"\r* Generating trajectories: {cur_pos - min_prompt_len:>4d}/{total_len - min_prompt_len:>4d}",
             flush=True,
             end="",
         )

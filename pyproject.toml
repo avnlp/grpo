@@ -30,10 +30,16 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black",
-    "mypy",
-    "ruff",
+    "bandit>=1.9.4",
+    "mypy>=1.20.0",
+    "pip-audit>=2.10.0",
+    "pre-commit>=4.5.1",
+    "ruff>=0.15.9",
+    "typos>=1.45.0",
 ]
+
+[tool.uv]
+default-groups = ["dev"]
 
 [project.urls]
 Documentation = "https://github.com/avnlp/grpo#readme"
@@ -42,6 +48,7 @@ Source = "https://github.com/avnlp/grpo"
 
 [tool.ruff]
 line-length = 120
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [
@@ -139,9 +146,51 @@ ban-relative-imports = "parents"
 # Tests can use magic values, assertions, and relative imports
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
-[tool.black]
-line-length = 120
+[tool.mypy]
+follow_imports = "skip"
+ignore_missing_imports = false
+install_types = true
+pretty = true
+non_interactive = true
+namespace_packages = true
+explicit_package_bases = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["grpo.*", "pytest.*", "numpy.*"]
+module = [
+    "accelerate.*",
+    "bottle.*",
+    "config.*",
+    "countdown_task.*",
+    "datasets.*",
+    "data_types.*",
+    "deepspeed.*",
+    "math_verify.*",
+    "numpy.*",
+    "optimizer.*",
+    "qwen2_model.*",
+    "reward_functions.*",
+    "tokenizer.*",
+    "tokenizers.*",
+    "torch.*",
+    "transformers.*",
+    "utils.*",
+    "vllm.*",
+    "wandb.*",
+]
 ignore_missing_imports = true
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["grpo.*"]
+follow_imports = "skip"
+ignore_errors = true
+
+[tool.bandit]
+exclude_dirs = ["/.venv", "/build", "/dist"]
+skips = ["B101"]

@@ -43,11 +43,11 @@ We refactor the original implementation into a modular, readable, and extensible
 
 ```bash
 andriy_burkov_lm_book/
-├── train_grpo.py         
-├── data_process.py      
-├── reward_functions.py      
+├── train_grpo.py  
+├── data_process.py  
+├── reward_functions.py  
 ├── evaluation.py  
-└── completions.py              
+└── completions.py  
 ```
 
 - **`prepare_dataset`**:
