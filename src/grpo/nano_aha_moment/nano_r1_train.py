@@ -187,7 +187,7 @@ for iteration in trange(NUM_ITERATIONS):
                 detokenize=False,
                 stop_token_ids=[EOS_TOKEN_ID],
             ),
-            reward_func=lambda completion, sample: compute_reward(completion, sample),
+            reward_func=compute_reward,
         )
         eval_episode_table = dump_episodes(
             episodes=eval_episodes,

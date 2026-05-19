@@ -1,4 +1,17 @@
-# Group Relative Policy Optimization (GRPO)
+<h1 align="center">
+    <a href="https://github.com/avnlp/grpo">Group Relative Policy Optimization (GRPO)</a>
+</h1>
+
+<div align="center">
+
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/avnlp/grpo)
+[![CI](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![Ruff](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=Ruff&logo=ruff)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![MyPy](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=MyPy&logo=python)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![Bandit](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=Bandit&logo=owasp)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/avnlp/grpo?color=green)](https://github.com/avnlp/grpo/blob/main/LICENSE)
+
+</div>
 
 Group Relative Policy Optimization (GRPO) is an algorithm proposed by Deepseek for training large language models with reinforcement learning. This repository aggregates and refactors **four distinct implementations** of GRPO, each demonstrating different approaches to the core algorithm while sharing common principles.
 
@@ -63,9 +76,9 @@ Input initial policy model π<sub>θ<sub>init</sub></sub>; reward function r<sub
 
 We provide four refactored implementations of GRPO, each with a different focus and design:
 
-### 1. [nanoAhaMoment](src/grpo/nano_aha_moment)
+### 1. [nanoAhaMoment](src/grpo/nanoAhaMoment)
 
-An implementation from [nanoAhaMoment](https://github.com/McGill-NLP/nano-aha-moment), that separates each step of the GRPO loop into distinct components. It uses a rule-based reward function for a Countdown task and integrates with vLLM for efficient generation.
+An implementation from [nanoAhaMoment](https://github.com/nanoAhaMoment/nanoAhaMoment), that separates each step of the GRPO loop into distinct components. It uses a rule-based reward function for a Countdown task and integrates with vLLM for efficient generation.
 
 - Modular pipeline with separated components
 - vLLM integration for efficient generation
@@ -73,7 +86,7 @@ An implementation from [nanoAhaMoment](https://github.com/McGill-NLP/nano-aha-mo
 - Format: `<think>...</think>\n<answer>...</answer>`
 - Rule-based reward functions for Countdown tasks
 
-### 2. [GRPO:Zero](src/grpo/grpo_zero)
+### 2. [GRPO:Zero](src/grpo/GRPO-Zero)
 
 An implementation from [GRPO-Zero](https://github.com/policy-gradient/GRPO-Zero), that uses a separate server for the reference model to offload computation. It uses the GSM8K dataset and a combined reward for correctness and format.
 
@@ -82,7 +95,7 @@ An implementation from [GRPO-Zero](https://github.com/policy-gradient/GRPO-Zero)
 - Simplified training workflow
 - Reward Function: Combined reward for correctness and format
 
-### 3. [Simple GRPO](src/grpo/simple_grpo)
+### 3. [Simple GRPO](src/grpo/Simple_GRPO)
 
 An implementation from [Simple GRPO](https://github.com/lsdefine/simple_GRPO), that uses DeepSpeed for training and a reference model server. It features a policy gradient loss with KL penalty and reward normalization within groups.
 
@@ -93,7 +106,7 @@ An implementation from [Simple GRPO](https://github.com/lsdefine/simple_GRPO), t
 - Distributed training support
 - Loss Calculation: `loss = -(policy_ratio * advantage - beta * kl_divergence)`
 
-### 4. [GRPO from Scratch](src/grpo/andriy_burkov_lm_book)
+### 4. [GRPO from Scratch](src/grpo/GRPO_from_Scratch)
 
 An implementation from ["The LM Book" by Andriy Burkov](https://github.com/aburkov/theLMbook/blob/main/GRPO.py), that demonstrates the core GRPO algorithm step-by-step. It uses a copy of the reference model and performs multiple updates per batch.
 
