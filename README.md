@@ -13,7 +13,7 @@
 
 </div>
 
-Group Relative Policy Optimization (GRPO) is an algorithm proposed by Deepseek for training large language models with reinforcement learning. This repository aggregates and refactors **four distinct implementations** of GRPO, each demonstrating different approaches to the core algorithm while sharing common principles.
+Group Relative Policy Optimization (GRPO) is an algorithm proposed by Deepseek for training large language models with reinforcement learning. This repository aggregates and refactors **four distinct open-source implementations** of GRPO, each demonstrating different systems choices - generation backends, reference model handling, training frameworks, and reward design - while sharing the same core algorithm.
 
 ## Algorithm
 
@@ -24,7 +24,6 @@ For each question $q$, GRPO samples a group of outputs $\{o_1, o_2, \cdots, o_G\
 <img src="images/grpo_objective.png" width="95%" alt="GRPO Objective">
 
 Instead of adding KL penalty in the reward, GRPO regularizes by directly adding the KL divergence between the trained policy and the reference policy to the loss, avoiding complicating the calculation of $\hat{A}_{i,t}$. The KL divergence is estimated with the following unbiased estimator, which is guaranteed to be positive:
-
 
 <div align="center">
     <img src="images/kl_divergence.png" width="60%" alt="GRPO KL Divergence">
@@ -88,22 +87,24 @@ An implementation from [nanoAhaMoment](https://github.com/McGill-NLP/nano-aha-mo
 
 ### 2. [GRPO:Zero](src/grpo/grpo_zero)
 
-An implementation from [GRPO-Zero](https://github.com/policy-gradient/GRPO-Zero), that uses a separate server for the reference model to offload computation. It uses the GSM8K dataset and a combined reward for correctness and format.
+An implementation from [GRPO-Zero](https://github.com/policy-gradient/GRPO-Zero), built on a custom Transformer and Tokenizer stack that loads Qwen2.5-3B-Instruct weights directly. It uses the Countdown task with YAML-driven configuration and TensorBoard logging.
 
-- Qwen2.5-3B-Instruct base model
+- Custom Transformer/Tokenizer loading Qwen2.5-3B-Instruct weights
 - Countdown-Tasks-3to4 dataset
-- Simplified training workflow
+- YAML configuration, TensorBoard logging
+- Normalized-reward policy gradient update
 - Reward Function: Combined reward for correctness and format
 
 ### 3. [Simple GRPO](src/grpo/simple_grpo)
 
-An implementation from [Simple GRPO](https://github.com/lsdefine/simple_GRPO), that uses DeepSpeed for training and a reference model server. It features a policy gradient loss with KL penalty and reward normalization within groups.
+An implementation from [Simple GRPO](https://github.com/lsdefine/simple_GRPO), that offloads reference model log-probability computation to a separate Bottle HTTP server. It uses DeepSpeed for training with a policy gradient loss, KL penalty, and optional PPO-style clipping.
 
-- Reference model server architecture
+- Qwen2.5-7B base model
+- Bottle HTTP server for reference model log-probabilities
 - GSM8K dataset
+- DeepSpeed distributed training
 - KL divergence penalty term
-- Per-token advantage calculation
-- Distributed training support
+- Per-token advantage calculation with optional clipped ratio
 - Loss Calculation: `loss = -(policy_ratio * advantage - beta * kl_divergence)`
 
 ### 4. [GRPO from Scratch](src/grpo/andriy_burkov_lm_book)
@@ -116,30 +117,117 @@ An implementation from ["The LM Book" by Andriy Burkov](https://github.com/aburk
 - Memory optimization techniques
 - Reward Function: Combined reward for correctness and format
 
-## Common Components
+## Architecture Comparison
 
-All implementations share the following steps:
+| | nanoAhaMoment | GRPO:Zero | Simple GRPO | GRPO from Scratch |
+|---|---|---|---|---|
+| **Task / Model** | Countdown / Qwen2.5-3B (base) | Countdown / Qwen2.5-3B-Instruct | GSM8K / Qwen2.5-7B (base) | GSM8K / Qwen2.5-0.5B-Instruct |
+| **Policy Objective** | REINFORCE + KL | Pure REINFORCE | PPO-clip + KL | PPO-clip + KL |
+| **Group Size (G)** | 4 | 8 | 8 | 16 |
+| **Updates per Rollout (μ)** | 1 | 1 | 1 | 1–N (configurable) |
+| **Reference Policy** | DeepSpeed engine, CPU-offloaded | None | Separate Bottle HTTP server | `copy.deepcopy()` per outer iteration |
+| **Generation Backend** | vLLM with sleep/wake GPU sharing | Custom KV-cache loop | `model.generate()` + captured gen log probs | `model.generate()` with prompt expansion |
+| **Training Framework** | DeepSpeed ZeRO-2 | Pure PyTorch + MemoryEfficientAdamW | DeepSpeed ZeRO-2 + optimizer CPU offload | Pure PyTorch + Adam |
+| **KL Coefficient (β)** | 0.001 | None | 0.04 | 0.04 |
+| **Clip Parameter (ε)** | None | None | 0.2 | 0.1 |
+| **Format Tags** | `<think>` / `<answer>` | `<think>` / `<answer>` | `<think>` / `<answer>` | `<reasoning>` / `<answer>` |
+| **Reward Range** | 0–2 | 0–1.1 | −2 to 2.25 | 0–2.8 |
+| **Optimizer / LR** | AdamW / 1e-6 | MemoryEfficientAdamW / 1e-5 | AdamW (CPU-offloaded) / 1e-6 | Adam / 5e-6 |
+| **Grad Clip** | 1.0 | 1.0 | DeepSpeed default | 0.1 |
+| **Checkpoint Format** | HF model + DeepSpeed state | `torch.save(state_dict)` | `save_pretrained` | `save_pretrained` |
+| **Logging** | WandB | TensorBoard | stdout only | stdout only |
 
-- **Group Sampling**: For each prompt, multiple completions are generated to form a group.
-- **Reward Calculation**: Each completion receives a scalar reward, typically combining correctness and format adherence.
-- **Advantage Normalization**: Within each group, rewards are normalized to have zero mean and unit variance to form advantages.
-- **Policy Update**: The policy is updated using a policy gradient method (with or without clipping) and often includes a KL penalty to prevent deviation from a reference policy.
+### Generation Backend
 
-## Variations
+The sharpest divergence across the four implementations.
 
-The implementations have different variations in the following aspects:
+- **nanoAhaMoment** - Dedicated vLLM engine with `enable_sleep_mode=True`. vLLM sleeps during the training backward pass and wakes up after, with updated weights pushed in via `load_weights`. Gives PagedAttention throughput without competing with DeepSpeed for GPU memory.
+- **GRPO:Zero** - Fully custom autoregressive loop with explicit KV-cache management (`init_kv_cache` / `inference` / `del_kv_cache`), generating one token at a time. Most transparent but least optimized.
+- **Simple GRPO** - HuggingFace `model.generate()` with `num_return_sequences=8`. Also captures generation-time log probs (`gen_logps`) in inference mode and ships them to the reference server, enabling PPO ratio clipping against the exact policy that produced the samples.
+- **GRPO from Scratch** - Same `model.generate()` path, but called on the training model itself after expanding prompts with `repeat_interleave`. No process separation; generation and training compete for the same GPU memory.
 
-- Reward Functions: The implementations use different reward functions tailored to the task and different weights for format and correctness.
-  - **Format Reward**: Enforces XML-style reasoning structure
-  - **Correctness Reward**: Validates solution accuracy
-  - **Combined Reward**: `R_total = R_format + R_correctness`
+### Reference Policy Handling
 
-- Reference Model Handling: Some implementations use a fixed reference model (via a separate server or a frozen copy) while others update the reference model periodically.
+- **nanoAhaMoment** - Second full model copy wrapped in a DeepSpeed inference engine. Moved to GPU to score log probs, then offloaded back to CPU after each gradient accumulation boundary.
+- **GRPO:Zero** - No reference model. Pure REINFORCE: `loss = -(log_probs × advantages).sum() / num_tokens`. Policy is unconstrained.
+- **Simple GRPO** - Frozen reference model runs in a **separate process** behind a Bottle HTTP server on port 59875. Training process POSTs serialized tensors, server responds with reference log probs. Fully decouples the reference GPU from the training GPU.
+- **GRPO from Scratch** - `copy.deepcopy(policy_model)` at the start of each outer iteration, then frozen for that iteration. Reference lags by one outer iteration rather than being fixed at initialization.
 
-- Training Framework: The implementations use different training frameworks (e.g., DeepSpeed, pure PyTorch) and optimization techniques (e.g., gradient checkpointing).
+### Loss Function
 
-- Batching and Generation: The approaches to generation (vLLM, Hugging Face transformers) and batching vary.
+All three KL-regularized implementations use the unbiased estimator `exp(ref − policy) − (ref − policy) − 1`, which is guaranteed non-negative.
 
+- **nanoAhaMoment** - `loss = (-logps × adv + β × KL).sum() / total_response_tokens`. β=0.001 keeps KL as a soft constraint.
+- **GRPO:Zero** - `loss = -(log_probs × adv × mask).sum() / num_tokens`. No KL term; policy is free to drift.
+- **Simple GRPO** - PPO clipped surrogate: `loss = -(min(r×adv, clip(r, 1±0.2)×adv) − β×KL)`. Ratio `r` is measured against generation-time log probs, not the current model.
+- **GRPO from Scratch** - Same PPO clip form with ε=0.1 and β=0.04, measured against log probs from the start of the inner step (`old_log_probs`).
+
+### Advantage Computation
+
+All four z-score rewards within a group: `(r − mean) / (std + 1e-4)`. The differences are in grouping and degenerate-batch handling.
+
+- **nanoAhaMoment** - Group of 4 per prompt; scalar advantage broadcast to every token in the response.
+- **GRPO:Zero** - Groups keyed by raw prefix string via `defaultdict`; normalized scalar stored back into `episode.reward`.
+- **Simple GRPO** - Normalizes across all 8 responses for a question before uploading. Skips batches where `max − min < 0.01` to avoid zero-variance degenerate updates.
+- **GRPO from Scratch** - Groups of 16; reshapes reward tensor to `(-1, 16)`, normalizes per row, then unsqueezes for token-level broadcasting. Largest group size yields the most stable advantage estimates.
+
+### Reward Design
+
+| | Format Signal | Correctness Signal | Range |
+|---|---|---|---|
+| **nanoAhaMoment** | 0 / 0.5 / 1.0 (format + answer purity) | 0 or 1.0 (equation correct, all numbers used) | 0–2 |
+| **GRPO:Zero** | 0 / 0.1 / 0.5 / 1.0 × 0.1 weight | 0 or 1.0 (equation correct, all numbers used) | 0–1.1 |
+| **Simple GRPO** | −1 or +1.25 (binary pass/fail) | −1 or +1.0 (via `math_verify` library) | −2 to 2.25 |
+| **GRPO from Scratch** | +0.2 per tag (4 tags, max 0.8) | +2.0 exact / +1.5 numeric / 0 wrong | 0–2.8 |
+
+Key differences in reward design:
+
+- **Negative rewards** - Only Simple GRPO penalizes failures (−1), giving stronger gradient signal on bad outputs.
+- **Verification method** - Simple GRPO uses the external `math_verify` library; the others use `literal_eval` or regex on extracted equations.
+- **Format weighting** - GRPO:Zero multiplies format reward by 0.1, making answer correctness dominate. GRPO from Scratch gives independent partial credit per XML tag.
+- **Format prompt** - nanoAhaMoment and GRPO:Zero pre-fill the assistant turn with `"Let me solve this step by step.\n<think>"` to nudge the base model. GRPO from Scratch uses `<reasoning>` tags and builds prompts manually without `apply_chat_template`.
+
+### Similarities
+
+- **Algorithm** - All implement group-relative advantage normalization from the DeepSeekMath paper: sample G outputs, z-score rewards within each group, optimize a policy gradient loss.
+- **KL estimator** - Three of four use the same unbiased `exp(r − p) − (r − p) − 1` estimator.
+- **Precision** - All train in bfloat16.
+- **Loss masking** - All mask prompt tokens from the loss; gradients flow only through generated response tokens.
+- **Model family** - All use Qwen2.5 (0.5B, 3B, or 7B).
+- **Output format** - All enforce a structured reasoning + answer format, differing only in tag names (`<think>` vs `<reasoning>`).
+
+## Repository Structure
+
+```
+src/grpo/
+├── nano_aha_moment/        # vLLM + DeepSpeed pipeline (Countdown)
+│   ├── nano_r1_train.py
+│   ├── config.py
+│   ├── episode_creation.py
+│   ├── reward_functions.py
+│   ├── policy_gradient_loss.py
+│   └── utils.py
+├── grpo_zero/              # Custom Transformer + Tokenizer (Countdown)
+│   ├── train.py
+│   ├── grpo.py
+│   ├── qwen2_model.py
+│   ├── tokenizer.py
+│   ├── countdown_task.py
+│   ├── optimizer.py
+│   ├── data_types.py
+│   └── config.yaml
+├── simple_grpo/            # Reference server + DeepSpeed (GSM8K)
+│   ├── train_grpo.py
+│   ├── ref_model_server.py
+│   ├── completions.py
+│   └── reward_functions.py
+└── andriy_burkov_lm_book/  # Pure PyTorch GRPO loop (GSM8K)
+    ├── train_grpo.py
+    ├── data_process.py
+    ├── completions.py
+    ├── evaluation.py
+    └── reward_functions.py
+```
 
 ## References
 
