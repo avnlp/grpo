@@ -76,9 +76,9 @@ Input initial policy model π<sub>θ<sub>init</sub></sub>; reward function r<sub
 
 We provide four refactored implementations of GRPO, each with a different focus and design:
 
-### 1. [nanoAhaMoment](src/grpo/nanoAhaMoment)
+### 1. [nanoAhaMoment](src/grpo/nano_aha_moment)
 
-An implementation from [nanoAhaMoment](https://github.com/nanoAhaMoment/nanoAhaMoment), that separates each step of the GRPO loop into distinct components. It uses a rule-based reward function for a Countdown task and integrates with vLLM for efficient generation.
+An implementation from [nanoAhaMoment](https://github.com/McGill-NLP/nano-aha-moment), that separates each step of the GRPO loop into distinct components. It uses a rule-based reward function for a Countdown task and integrates with vLLM for efficient generation.
 
 - Modular pipeline with separated components
 - vLLM integration for efficient generation
@@ -86,7 +86,7 @@ An implementation from [nanoAhaMoment](https://github.com/nanoAhaMoment/nanoAhaM
 - Format: `<think>...</think>\n<answer>...</answer>`
 - Rule-based reward functions for Countdown tasks
 
-### 2. [GRPO:Zero](src/grpo/GRPO-Zero)
+### 2. [GRPO:Zero](src/grpo/grpo_zero)
 
 An implementation from [GRPO-Zero](https://github.com/policy-gradient/GRPO-Zero), that uses a separate server for the reference model to offload computation. It uses the GSM8K dataset and a combined reward for correctness and format.
 
@@ -95,7 +95,7 @@ An implementation from [GRPO-Zero](https://github.com/policy-gradient/GRPO-Zero)
 - Simplified training workflow
 - Reward Function: Combined reward for correctness and format
 
-### 3. [Simple GRPO](src/grpo/Simple_GRPO)
+### 3. [Simple GRPO](src/grpo/simple_grpo)
 
 An implementation from [Simple GRPO](https://github.com/lsdefine/simple_GRPO), that uses DeepSpeed for training and a reference model server. It features a policy gradient loss with KL penalty and reward normalization within groups.
 
@@ -106,7 +106,7 @@ An implementation from [Simple GRPO](https://github.com/lsdefine/simple_GRPO), t
 - Distributed training support
 - Loss Calculation: `loss = -(policy_ratio * advantage - beta * kl_divergence)`
 
-### 4. [GRPO from Scratch](src/grpo/GRPO_from_Scratch)
+### 4. [GRPO from Scratch](src/grpo/andriy_burkov_lm_book)
 
 An implementation from ["The LM Book" by Andriy Burkov](https://github.com/aburkov/theLMbook/blob/main/GRPO.py), that demonstrates the core GRPO algorithm step-by-step. It uses a copy of the reference model and performs multiple updates per batch.
 
