@@ -71,7 +71,7 @@ def generate_mode(num=10, rank=0):
         requests.post(f"{ref_server}/upload", data=xdata)
     if rank == 0:
         print("exit generate mode")
-    print(f"{rank}: {time.time()-tic:.3f}s")
+    print(f"{rank}: {time.time() - tic:.3f}s")
 
 
 if "genonly" in sys.argv:

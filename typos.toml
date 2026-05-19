@@ -1,0 +1,10 @@
+[default.extend-words]
+ba = "ba"
+nin = "nin"
+nd = "nd"
+GRPO = "GRPO"
+DeepSeek = "DeepSeek"
+Qwen = "Qwen"
+
+[files]
+extend-exclude = ["*.txt"]

@@ -1,0 +1,69 @@
+fail_fast: true
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-ast
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.9
+    hooks:
+      - id: ruff-check
+        args: [--fix, --unsafe-fixes, --exit-non-zero-on-fix]
+        types_or: [python, jupyter]
+      - id: ruff-format
+        types_or: [python, jupyter]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.9.4"
+    hooks:
+      - id: bandit
+        args:
+          [
+            "-c",
+            "pyproject.toml",
+            "-r",
+            "--severity-level",
+            "high",
+            "--confidence-level",
+            "high",
+            "--exit-zero",
+            "src/",
+          ]
+        additional_dependencies: ["bandit[toml]"]
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy src/
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.45.0
+    hooks:
+      - id: typos
+
+ci:
+  autofix_prs: true
+  autofix_commit_msg: "ci: Auto fixes from pre-commit"
+  autofix_prs_limit: 5
+  autoupdate_schedule: monthly
+  autoupdate_commit_msg: "ci: Pre-commit autoupdate"
+  skip: [mypy]

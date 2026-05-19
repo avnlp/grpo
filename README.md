@@ -1,4 +1,17 @@
-# Group Relative Policy Optimization (GRPO)
+<h1 align="center">
+    <a href="https://github.com/avnlp/grpo">Group Relative Policy Optimization (GRPO)</a>
+</h1>
+
+<div align="center">
+
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/avnlp/grpo)
+[![CI](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=CI&logo=githubactions)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![Ruff](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=Ruff&logo=ruff)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![MyPy](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=MyPy&logo=python)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![Bandit](https://img.shields.io/github/actions/workflow/status/avnlp/grpo/ci.yml?branch=main&label=Bandit&logo=owasp)](https://github.com/avnlp/grpo/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/avnlp/grpo?color=green)](https://github.com/avnlp/grpo/blob/main/LICENSE)
+
+</div>
 
 Group Relative Policy Optimization (GRPO) is an algorithm proposed by Deepseek for training large language models with reinforcement learning. This repository aggregates and refactors **four distinct implementations** of GRPO, each demonstrating different approaches to the core algorithm while sharing common principles.
 
